@@ -1,0 +1,1 @@
+{"labels": ["area_m2", "community_encoded", "area_sqft", "zone_encoded", "listing_year", "mortgage_rate_at_listing", "property_type_3BR_villa", "property_type_4BR_penthouse"], "values": [0.3473847508430481, 0.3472285270690918, 0.07234801352024078, 0.04864649102091789, 0.03473639488220215, 0.026704948395490646, 0.024070745334029198, 0.01576571725308895]}
