@@ -14,6 +14,9 @@ with open("feature_importance.json") as f:
 
 API_URL = "https://dubai-real-estate-predictor.onrender.com/predict"
 
+ACCENT = "#4F8BF9"
+NEUTRAL = "#4A4E58"
+
 presets = {
     "karama": dict(community="Karama", zone="Bur Dubai", property_category="apartment",
                    property_type="1BR", bedrooms=1, area_sqft=824, area_m2=76.5, floor=14,
@@ -132,21 +135,31 @@ with tab_predict:
             if response.status_code == 200:
                 price = response.json()["predicted_price_usd"]
                 st.success("Prediction complete")
-                st.balloons()
 
                 col_a, col_b = st.columns([1, 2])
                 with col_a:
                     st.metric("Estimated Price (USD)", f"${price:,.0f}")
                     st.metric("Price per sqft", f"${price/area_sqft:,.0f}")
                 with col_b:
-                    st.map({"lat": [lat], "lon": [lon]}, zoom=11)
+                    map_fig = go.Figure(go.Scattermapbox(
+                        lat=[lat], lon=[lon], mode='markers',
+                        marker=dict(size=16, color=ACCENT),
+                        text=[community], hoverinfo='text'
+                    ))
+                    map_fig.update_layout(
+                        mapbox_style="carto-positron",
+                        mapbox=dict(center=dict(lat=lat, lon=lon), zoom=11),
+                        height=350,
+                        margin=dict(l=0, r=0, t=0, b=0)
+                    )
+                    st.plotly_chart(map_fig, use_container_width=True)
 
                 # Prediction vs community average chart
                 avg_price = community_avg_price.get(community)
                 if avg_price:
                     fig = go.Figure(data=[
-                        go.Bar(name="This Property", x=["Price"], y=[price], marker_color="#C9A227"),
-                        go.Bar(name=f"{community} Average", x=["Price"], y=[avg_price], marker_color="#4A4E58"),
+                        go.Bar(name="This Property", x=["Price"], y=[price], marker_color=ACCENT),
+                        go.Bar(name=f"{community} Average", x=["Price"], y=[avg_price], marker_color=NEUTRAL),
                     ])
                     fig.update_layout(title=f"Prediction vs. {community} Average", barmode="group", height=350)
                     st.plotly_chart(fig, use_container_width=True)
@@ -156,7 +169,7 @@ with tab_predict:
                     x=feature_importance["values"][::-1],
                     y=feature_importance["labels"][::-1],
                     orientation="h",
-                    marker_color="#C9A227"
+                    marker_color=ACCENT
                 ))
                 fig2.update_layout(title="What drives this model's predictions", height=350)
                 st.plotly_chart(fig2, use_container_width=True)
@@ -175,7 +188,7 @@ with tab_explore:
         x=list(sorted_communities.values()),
         y=list(sorted_communities.keys()),
         orientation="h",
-        marker_color="#C9A227"
+        marker_color=ACCENT
     ))
     fig3.update_layout(height=500, xaxis_title="Average Price (USD)")
     st.plotly_chart(fig3, use_container_width=True)
