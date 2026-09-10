@@ -7,6 +7,8 @@ An end-to-end machine learning project that predicts Dubai secondary-market prop
 
 > Note: the API runs on a free-tier server that sleeps after inactivity — the first request may take ~30-45 seconds to respond while it wakes up.
 
+![App overview](screenshots/app-overview.png)
+
 ---
 
 ## Overview
@@ -37,6 +39,19 @@ This project predicts resale prices for Dubai properties using real transaction 
 | **XGBoost (final)** | **0.990** | **$36,748** |
 
 4. **Deployment** — trained model served via a FastAPI `/predict` endpoint, consumed by a Streamlit frontend with dropdown-based inputs (sourced from real dataset values, not free text), interactive maps, and comparison charts
+
+### Example prediction
+
+Predicting a 1-bedroom apartment in Karama — the model estimates **$160,906**, closely matching the real transaction price of $167,100 for that property.
+
+![Karama prediction result](screenshots/karama-result.png)
+
+### Handling high-value outliers
+
+The model also scales well to luxury properties. Here's a 5-bedroom villa in Emirates Hills, shown against the community average and the model's overall feature importance:
+
+![Emirates Hills prediction result](screenshots/emirates-hills-result.png)
+![Feature importance chart](screenshots/feature-importance.png)
 
 ## What drives the model
 
