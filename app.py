@@ -5,17 +5,21 @@ import plotly.graph_objects as go
 
 st.set_page_config(page_title="Dubai Real Estate Price Predictor", page_icon="🏙️", layout="wide")
 
-with open("dropdown_values.json") as f:
-    options = json.load(f)
-with open("community_avg_price.json") as f:
-    community_avg_price = json.load(f)
-with open("feature_importance.json") as f:
-    feature_importance = json.load(f)
-
+AED_PEG = 3.6725
 API_URL = "https://dubai-real-estate-predictor.onrender.com/predict"
+ACCENT, NEUTRAL = "#4F8BF9", "#4A4E58"
 
-ACCENT = "#4F8BF9"
-NEUTRAL = "#4A4E58"
+@st.cache_data
+def load_assets():
+    with open("dropdown_values.json") as f:
+        options = json.load(f)
+    with open("community_avg_price.json") as f:
+        avg_prices = json.load(f)
+    with open("feature_importance.json") as f:
+        feat_imp = json.load(f)
+    return options, avg_prices, feat_imp
+
+options, community_avg_price, feature_importance = load_assets()
 
 presets = {
     "karama": dict(community="Karama", zone="Bur Dubai", property_category="apartment",
@@ -44,24 +48,28 @@ presets = {
                             lat=25.0657, lon=55.1713, is_freehold=True),
 }
 
+if "current_preset" not in st.session_state:
+    st.session_state.current_preset = presets["karama"]
+
 st.title("🏙️ Dubai Real Estate Price Predictor")
 st.caption("Trained on 50,000 real Dubai secondary-market transactions · XGBoost · R² = 0.99")
 
 tab_predict, tab_explore, tab_about = st.tabs(["🔮 Predict", "📊 Explore Data", "ℹ️ About"])
 
-# ---------------- PREDICT TAB ----------------
 with tab_predict:
-    st.subheader("Try an example")
-    preset_col1, preset_col2, preset_col3 = st.columns(3)
-    preset = None
-    if preset_col1.button("🏢 Karama Apartment", use_container_width=True):
-        preset = "karama"
-    if preset_col2.button("🏙️ DIFC Penthouse", use_container_width=True):
-        preset = "difc"
-    if preset_col3.button("🏡 Emirates Hills Villa", use_container_width=True):
-        preset = "emirates_hills"
+    st.subheader("Try an Example")
+    p_cols = st.columns(3)
+    if p_cols[0].button("🏢 Karama Apartment", use_container_width=True):
+        st.session_state.current_preset = presets["karama"]
+        st.rerun()
+    if p_cols[1].button("🏙️ DIFC Penthouse", use_container_width=True):
+        st.session_state.current_preset = presets["difc"]
+        st.rerun()
+    if p_cols[2].button("🏡 Emirates Hills Villa", use_container_width=True):
+        st.session_state.current_preset = presets["emirates_hills"]
+        st.rerun()
 
-    d = presets.get(preset, {})
+    data = st.session_state.current_preset
 
     st.divider()
 
@@ -70,46 +78,54 @@ with tab_predict:
 
         with col1:
             community = st.selectbox("Community", options["community"],
-                                      index=options["community"].index(d["community"]) if d else 0)
+                                      index=options["community"].index(data["community"]))
             zone = st.selectbox("Zone", options["zone"],
-                                 index=options["zone"].index(d["zone"]) if d else 0)
-            property_category = st.selectbox("Property Category", options["property_category"],
-                                              index=options["property_category"].index(d["property_category"]) if d else 0)
-            property_type = st.selectbox("Property Type", options["property_type"],
-                                          index=options["property_type"].index(d["property_type"]) if d else 0)
-            bedrooms = st.slider("Bedrooms", 0, 10, d.get("bedrooms", 1))
-            area_sqft = st.slider("Area (sqft)", 200, 10000, d.get("area_sqft", 800), step=50)
+                                 index=options["zone"].index(data["zone"]))
+            property_category = st.selectbox("Category", options["property_category"],
+                                               index=options["property_category"].index(data["property_category"]))
+            property_type = st.selectbox("Unit Type", options["property_type"],
+                                          index=options["property_type"].index(data["property_type"]))
+            bedrooms = st.slider("Bedrooms", 0, 10, data.get("bedrooms", 1))
+            area_sqft = st.slider("Area (sqft)", 200, 10000, data.get("area_sqft", 800), step=50)
             area_m2 = round(area_sqft * 0.092903, 1)
             st.caption(f"≈ {area_m2} m²")
-            floor = st.number_input("Floor (0 if villa)", min_value=0, value=d.get("floor", 0))
-            total_floors = st.number_input("Total Floors (0 if villa)", min_value=0, value=d.get("total_floors", 0))
-            year_built = st.slider("Year Built", 1990, 2026, d.get("year_built", 2018))
-            view = st.selectbox("View", options["view"],
-                                 index=options["view"].index(d["view"]) if d else 0)
-            is_freehold = st.checkbox("Freehold", value=d.get("is_freehold", False))
+
+            if property_category.lower() == "apartment":
+                floor = st.number_input("Floor", min_value=0, value=data.get("floor", 1))
+                total_floors = st.number_input("Total Floors in Building", min_value=1, value=data.get("total_floors", 10))
+            else:
+                st.caption("Floor / total floors not applicable for villas")
+                floor, total_floors = 0, 0
+
+            year_built = st.slider("Year Built", 1990, 2026, data.get("year_built", 2018))
 
         with col2:
-            furnishing = st.selectbox("Furnishing", options["furnishing"],
-                                       index=options["furnishing"].index(d["furnishing"]) if d else 0)
-            condition = st.selectbox("Condition", options["condition"],
-                                      index=options["condition"].index(d["condition"]) if d else 0)
-            parking_spaces = st.slider("Parking Spaces", 0, 6, d.get("parking_spaces", 1))
-            chiller_included = st.checkbox("Chiller Included", value=d.get("chiller_included", False))
-            metro_station = st.selectbox("Metro Station", options["metro_station"],
-                                          index=options["metro_station"].index(d["metro_station"]) if d else 0)
-            metro_line = st.selectbox("Metro Line", options["metro_line"],
-                                       index=options["metro_line"].index(d["metro_line"]) if d else 0)
-            metro_distance_min = st.slider("Metro Distance (min)", 0, 60, d.get("metro_distance_min", 10))
-            metro_distance_type = st.selectbox("Metro Distance Type", options["metro_distance_type"],
-                                                index=options["metro_distance_type"].index(d["metro_distance_type"]) if d else 0)
-            to_burj_khalifa_km = st.slider("Distance to Burj Khalifa (km)", 0.0, 50.0, d.get("to_burj_khalifa_km", 10.0))
-            mortgage_rate_at_listing = st.slider("Mortgage Rate at Listing (%)", 0.0, 8.0, d.get("mortgage_rate_at_listing", 4.0))
-            listing_year = st.slider("Listing Year", 2015, 2026, d.get("listing_year", 2024))
-            listing_month = st.slider("Listing Month", 1, 12, d.get("listing_month", 6))
-            lat = st.number_input("Latitude", value=d.get("lat", 25.2048), format="%.5f")
-            lon = st.number_input("Longitude", value=d.get("lon", 55.2708), format="%.5f")
+            view = st.selectbox("View", options["view"], index=options["view"].index(data["view"]))
+            furnishing = st.selectbox("Furnishing", options["furnishing"], index=options["furnishing"].index(data["furnishing"]))
+            condition = st.selectbox("Condition", options["condition"], index=options["condition"].index(data["condition"]))
+            parking_spaces = st.slider("Parking Spaces", 0, 6, data.get("parking_spaces", 1))
+            is_freehold = st.checkbox("Freehold", value=data.get("is_freehold", True))
+            chiller_included = st.checkbox("Chiller Included", value=data.get("chiller_included", False))
 
-        submitted = st.form_submit_button("🔮 Predict Price", type="primary", use_container_width=True)
+        with st.expander("Advanced: Location, Metro & Market Assumptions"):
+            col_m1, col_m2 = st.columns(2)
+            with col_m1:
+                lat = st.number_input("Latitude", value=data.get("lat", 25.2048), format="%.5f")
+                lon = st.number_input("Longitude", value=data.get("lon", 55.2708), format="%.5f")
+                metro_station = st.selectbox("Metro Station", options["metro_station"],
+                                              index=options["metro_station"].index(data["metro_station"]))
+                metro_line = st.selectbox("Metro Line", options["metro_line"],
+                                           index=options["metro_line"].index(data["metro_line"]))
+                metro_distance_min = st.slider("Metro Distance (min)", 0, 60, data.get("metro_distance_min", 10))
+                metro_distance_type = st.selectbox("Metro Distance Type", options["metro_distance_type"],
+                                                    index=options["metro_distance_type"].index(data["metro_distance_type"]))
+            with col_m2:
+                to_burj_khalifa_km = st.slider("Distance to Burj Khalifa (km)", 0.0, 50.0, data.get("to_burj_khalifa_km", 10.0))
+                mortgage_rate_at_listing = st.slider("Mortgage Rate at Listing (%)", 1.0, 10.0, data.get("mortgage_rate_at_listing", 4.5))
+                listing_year = st.number_input("Listing Year", 2015, 2026, data.get("listing_year", 2024))
+                listing_month = st.slider("Listing Month", 1, 12, data.get("listing_month", 6))
+
+        submitted = st.form_submit_button("🔮 Predict Valuation", type="primary", use_container_width=True)
 
     if submitted:
         payload = dict(
@@ -139,11 +155,13 @@ with tab_predict:
 
             if response.status_code == 200:
                 price = response.json()["predicted_price_usd"]
+                price_aed = price * AED_PEG
                 st.success("Prediction complete")
 
                 col_a, col_b = st.columns([1, 2])
                 with col_a:
                     st.metric("Estimated Price (USD)", f"${price:,.0f}")
+                    st.metric("Estimated Price (AED)", f"AED {price_aed:,.0f}")
                     st.metric("Price per sqft", f"${price/area_sqft:,.0f}")
                 with col_b:
                     map_fig = go.Figure(go.Scattermap(
@@ -159,7 +177,6 @@ with tab_predict:
                     )
                     st.plotly_chart(map_fig, use_container_width=True)
 
-                # Prediction vs community average chart
                 avg_price = community_avg_price.get(community)
                 if avg_price:
                     fig = go.Figure(data=[
@@ -169,7 +186,6 @@ with tab_predict:
                     fig.update_layout(title=f"Prediction vs. {community} Average", barmode="group", height=350)
                     st.plotly_chart(fig, use_container_width=True)
 
-                # Feature importance chart
                 fig2 = go.Figure(go.Bar(
                     x=feature_importance["values"][::-1],
                     y=feature_importance["labels"][::-1],
@@ -185,7 +201,6 @@ with tab_predict:
             progress.empty()
             st.error(f"Could not reach the API: {e}")
 
-# ---------------- EXPLORE TAB ----------------
 with tab_explore:
     st.subheader("Average Price by Community (Top 15)")
     sorted_communities = dict(sorted(community_avg_price.items(), key=lambda x: x[1], reverse=True)[:15])
@@ -198,7 +213,6 @@ with tab_explore:
     fig3.update_layout(height=500, xaxis_title="Average Price (USD)")
     st.plotly_chart(fig3, use_container_width=True)
 
-# ---------------- ABOUT TAB ----------------
 with tab_about:
     st.subheader("About this project")
     st.write(
