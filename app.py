@@ -124,11 +124,16 @@ with tab_predict:
             listing_month=listing_month
         )
 
-        progress = st.progress(0, text="Waking up the model server...")
+        progress = st.progress(0, text="Waking up the model server (may take up to 90s on first request)...")
+        response = None
         try:
             for pct in [20, 40, 60]:
                 progress.progress(pct, text="Contacting API..." if pct < 60 else "Almost there...")
-            response = requests.post(API_URL, json=payload, timeout=60)
+            try:
+                response = requests.post(API_URL, json=payload, timeout=120)
+            except requests.exceptions.Timeout:
+                progress.progress(80, text="Server was asleep, retrying now that it's awake...")
+                response = requests.post(API_URL, json=payload, timeout=120)
             progress.progress(100, text="Done")
             progress.empty()
 
@@ -141,14 +146,14 @@ with tab_predict:
                     st.metric("Estimated Price (USD)", f"${price:,.0f}")
                     st.metric("Price per sqft", f"${price/area_sqft:,.0f}")
                 with col_b:
-                    map_fig = go.Figure(go.Scattermapbox(
+                    map_fig = go.Figure(go.Scattermap(
                         lat=[lat], lon=[lon], mode='markers',
                         marker=dict(size=16, color=ACCENT),
                         text=[community], hoverinfo='text'
                     ))
                     map_fig.update_layout(
-                        mapbox_style="carto-positron",
-                        mapbox=dict(center=dict(lat=lat, lon=lon), zoom=11),
+                        map_style="carto-positron",
+                        map=dict(center=dict(lat=lat, lon=lon), zoom=11),
                         height=350,
                         margin=dict(l=0, r=0, t=0, b=0)
                     )
