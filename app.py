@@ -9,6 +9,9 @@ AED_PEG = 3.6725
 API_URL = "https://dubai-real-estate-predictor.onrender.com/predict"
 ACCENT, NEUTRAL = "#4F8BF9", "#4A4E58"
 
+def clean_label(label):
+    return label.replace("_encoded", "").replace("_", " ").title()
+
 @st.cache_data
 def load_assets():
     with open("dropdown_values.json") as f:
@@ -128,7 +131,6 @@ with tab_predict:
         submitted = st.form_submit_button("🔮 Predict Valuation", type="primary", use_container_width=True)
 
     if submitted:
-        # Sanitize floors if property is villa
         final_floor = 0 if property_category.lower() != "apartment" else floor
         final_total_floors = 0 if property_category.lower() != "apartment" else total_floors
 
@@ -162,7 +164,6 @@ with tab_predict:
                 status.update(label="Connection Failed", state="error", expanded=True)
                 st.error(f"Could not reach API: {e}")
 
-    # Render results (persists across tab switches)
     if "last_prediction" in st.session_state:
         pred_data = st.session_state.last_prediction
         price = pred_data["price"]
@@ -202,7 +203,7 @@ with tab_predict:
 
         fig2 = go.Figure(go.Bar(
             x=feature_importance["values"][::-1],
-            y=feature_importance["labels"][::-1],
+            y=[clean_label(l) for l in feature_importance["labels"]][::-1],
             orientation="h",
             marker_color=ACCENT
         ))
