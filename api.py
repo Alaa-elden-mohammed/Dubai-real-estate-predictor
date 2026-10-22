@@ -48,7 +48,7 @@ def predict(data: PropertyInput):
     row["community_encoded"] = community_map.get(row.pop("community"), community_map.mean())
     row["zone_encoded"] = zone_map.get(row.pop("zone"), zone_map.mean())
     row["metro_station_encoded"] = metro_map.get(row.pop("metro_station"), metro_map.mean())
-    row["has_floor_info"] = 1 if row["floor"] > 0 else 0
+    row["has_floor_info"] = 1 if str(row["property_category"]).lower() == "apartment" else 0
 
     df_input = pd.DataFrame([row])
     df_input = pd.get_dummies(df_input)

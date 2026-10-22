@@ -61,7 +61,7 @@ if "current_preset" not in st.session_state:
     st.session_state.current_preset = presets["karama"]
 
 st.title("🏙️ Dubai Real Estate Price Predictor")
-st.caption("Trained on 50,000 real Dubai secondary-market transactions · XGBoost · R² = 0.99")
+st.caption("Trained on a synthetic dataset of 50,000 Dubai property listings (Kaggle) · XGBoost · R² = 0.95 on a time-based hold-out")
 
 tab_predict, tab_explore, tab_about = st.tabs(["🔮 Predict", "📊 Explore Data", "ℹ️ About"])
 
@@ -125,7 +125,7 @@ with tab_predict:
             with col_m2:
                 to_burj_khalifa_km = st.slider("Distance to Burj Khalifa (km)", 0.0, 50.0, data.get("to_burj_khalifa_km", 10.0))
                 mortgage_rate_at_listing = st.slider("Mortgage Rate at Listing (%)", 1.0, 10.0, data.get("mortgage_rate_at_listing", 4.5))
-                listing_year = st.number_input("Listing Year", 2015, 2026, data.get("listing_year", 2024))
+                listing_year = st.number_input("Listing Year", 2020, 2026, data.get("listing_year", 2024))
                 listing_month = st.slider("Listing Month", 1, 12, data.get("listing_month", 6))
 
         submitted = st.form_submit_button("🔮 Predict Valuation", type="primary", use_container_width=True)
@@ -225,14 +225,16 @@ with tab_explore:
 with tab_about:
     st.subheader("About this project")
     st.write(
-        "This model was trained on 50,000 real Dubai secondary-market property transactions "
-        "(2020–2026). Three models were compared — Linear Regression, Random Forest, and XGBoost — "
-        "with XGBoost performing best (R² = 0.99, median error ≈ $36,700)."
+        "This demo was trained on a public synthetic dataset of 50,000 Dubai property listings "
+        "(2020–2026), generated from a hedonic pricing model anchored to public market averages. "
+        "XGBoost performed best of three models (R² = 0.95, median error ≈ 12% on a time-based hold-out). "
+        "Predictions are illustrative, not real valuations."
     )
     st.write(
-        "Community/location is the single strongest price driver, followed by property size. "
-        "The full pipeline — data cleaning, feature engineering, model training, and this live "
-        "demo — is documented in the GitHub repository."
+         "Property size and location (community and zone) are the strongest price drivers, "
+         "followed by listing year and the mortgage rate at listing. "
+         "The full pipeline — data cleaning, feature engineering, model training, and this live "
+         "demo — is documented in the GitHub repository."
     )
     st.link_button("View source on GitHub", "https://github.com/Alaa-elden-mohammed/Dubai-real-estate-predictor")
 
