@@ -13,9 +13,13 @@ An end-to-end machine learning project that predicts Dubai secondary-market prop
 
 ## Overview
 
-This project predicts resale prices for Dubai properties using real transaction data (2020–2026). It covers the full ML lifecycle: data cleaning, feature engineering, model comparison, deployment, and a production-style frontend — not just a notebook.
+This project predicts prices for Dubai properties using a public **synthetic** dataset of 50,000 listings (2020–2026). It covers the full ML lifecycle: data cleaning, feature engineering, model comparison, leakage checks, time-based validation, deployment, and a production-style frontend — not just a notebook.
 
-**Key result:** An XGBoost model achieves **R² = 0.99** with a median prediction error of approximately **$36,700**, evaluated on a held-out test set of 10,000 real transactions.
+**Key result:** On a time-based hold-out (trained on Jan 2020 – Jan 2025, tested on Jan 2025 – Apr 2026), XGBoost reaches **R² = 0.95** on dollar prices with a median absolute error of about **$71K (~12%)**.
+
+## Limitations
+
+The data is synthetic: listing characteristics and prices come from a hedonic pricing model with real-world anchors. High scores show the model recovers that pricing structure, not accuracy on real sales. A real-data version would use Dubai Land Department transaction records. Predictions in the app are illustrative, not valuations.
 
 ## Tech Stack
 
@@ -28,34 +32,44 @@ This project predicts resale prices for Dubai properties using real transaction 
 
 ## Approach
 
-1. **Data cleaning** — handled missing values (structural, e.g. villas have no floor number), removed target-leakage columns
-2. **Feature engineering** — target encoding for high-cardinality categoricals (84 communities, 55 metro stations), log-transformed the price target to correct right-skew
-3. **Model comparison** — Linear Regression, Random Forest, and XGBoost, evaluated on held-out test data
+1. **Data cleaning** — handled structural missing values (villas have no floor number, flagged with `has_floor_info`) and dropped price-derived columns (price per sqft and per m²) to avoid target leakage
+2. **Feature engineering** — target encoding, fitted on training data only, for high-cardinality categoricals (84 communities, 55 metro stations, zones); one-hot encoding for the rest; log-transformed price target to correct right-skew
+3. **Model comparison** — Linear Regression, Random Forest, and XGBoost on a random 80/20 split (10,000 held-out listings):
 
-| Model | R² | Median $ Error |
+| Model | R² (log price) | Median $ Error |
 |---|---|---|
 | Linear Regression | 0.962 | $68,690 |
 | Random Forest | 0.981 | $48,235 |
 | **XGBoost (final)** | **0.990** | **$36,748** |
 
-4. **Deployment** — trained model served via a FastAPI `/predict` endpoint, consumed by a Streamlit frontend with dropdown-based inputs (sourced from real dataset values, not free text), interactive maps, and comparison charts
+4. **Validation** — checked for leakage (no duplicate feature rows, single-feature scan, encodings fitted after the split), then re-tested XGBoost with a time-based split, which is the more honest estimate:
+
+| XGBoost, time-based hold-out | Result |
+|---|---|
+| R² (log price) | 0.974 |
+| R² (dollar price) | 0.951 |
+| Median absolute error | $71,383 (~12%) |
+
+   The random split flattered the result, so the time-based numbers are the ones to trust.
+
+5. **Deployment** — trained model served via a FastAPI `/predict` endpoint, consumed by a Streamlit frontend with dropdown-based inputs (sourced from dataset values, not free text), interactive maps, and comparison charts
 
 ### Example prediction
 
-Predicting a 1-bedroom apartment in Karama — the model estimates **$160,906**, closely matching the real transaction price of $167,100 for that property.
+Predicting a 1-bedroom apartment in Karama — the model estimates **$160,906**; the dataset lists $167,100 for that property. This example is illustrative and may be part of the training data.
 
 ![Karama prediction result](screenshots/karama-result.png)
 
-### Handling high-value outliers
+### Example: high-value property
 
-The model also scales well to luxury properties. Here's a 5-bedroom villa in Emirates Hills, shown against the community average and the model's overall feature importance:
+A 5-bedroom villa in Emirates Hills, shown against the community average and the model's overall feature importance:
 
 ![Emirates Hills prediction result](screenshots/emirates-hills-result.png)
 ![Feature importance chart](screenshots/feature-importance.png)
 
 ## What drives the model
 
-Location dominates: `community` alone accounts for ~61% of feature importance in the Random Forest model, consistent with real-world Dubai market intuition (Emirates Hills, Bulgari Resort, and Umm Suqeim top the price rankings). Property size is the second strongest driver.
+In the final XGBoost model, property size (about 42% of feature importance) and community (about 35%) are the strongest drivers, followed by zone, listing year, and the mortgage rate at listing.
 
 ## Run locally
 
@@ -73,7 +87,7 @@ streamlit run app.py
 
 ## Dataset
 
-[Dubai Real Estate: Sales & Rentals (2020–2026)](https://www.kaggle.com/datasets/sergionefedov/dubai-real-estate-sales-and-rentals-20202026) — Kaggle, 50,000 secondary-market transaction records across 84 Dubai communities.
+[Dubai Real Estate: Sales & Rentals (2020–2026)](https://www.kaggle.com/datasets/sergionefedov/dubai-real-estate-sales-and-rentals-20202026) — Kaggle, synthetic dataset; this project uses the 50,000-row secondary-sales file across 84 Dubai communities.
 
 ## Author
 
