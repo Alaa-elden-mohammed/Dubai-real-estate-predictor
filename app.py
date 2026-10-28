@@ -227,7 +227,7 @@ with tab_about:
     st.write(
         "This demo was trained on a public synthetic dataset of 50,000 Dubai property listings "
         "(2020–2026), generated from a hedonic pricing model anchored to public market averages. "
-        "XGBoost performed best of three models (R² = 0.95, median error ≈ 12% on a time-based hold-out). "
+        "    On a time-based hold-out, Random Forest and XGBoost performed similarly (R² ≈ 0.95), well above Linear Regression (0.84).  "
         "Predictions are illustrative, not real valuations."
     )
     st.write(
