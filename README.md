@@ -40,7 +40,7 @@ The data is synthetic: listing characteristics and prices come from a hedonic pr
 |---|---|---|
 | Linear Regression | 0.962 | $68,690 |
 | Random Forest | 0.981 | $48,235 |
-| **XGBoost (final)** | **0.990** | **$36,748** |
+| **XGBoost (deployed)** | **0.990** | **$36,748** |
 
 4. **Validation** — checked for leakage (no duplicate feature rows, single-feature scan, encodings fitted after the split), then re-tested all three models with a time-based split (trained on Jan 2020 – Jan 2025, tested on Jan 2025 – Apr 2026), which is the more honest estimate:
 
