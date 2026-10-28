@@ -15,7 +15,7 @@ An end-to-end machine learning project that predicts Dubai secondary-market prop
 
 This project predicts prices for Dubai properties using a public **synthetic** dataset of 50,000 listings (2020–2026). It covers the full ML lifecycle: data cleaning, feature engineering, model comparison, leakage checks, time-based validation, deployment, and a production-style frontend — not just a notebook.
 
-**Key result:** On a time-based hold-out (trained on Jan 2020 – Jan 2025, tested on Jan 2025 – Apr 2026), XGBoost reaches **R² = 0.95** on dollar prices with a median absolute error of about **$71K (~12%)**.
+**Key result:** On a time-based hold-out (trained Jan 2020 – Jan 2025, tested Jan 2025 – Apr 2026), Random Forest and XGBoost both reach **R² ≈ 0.95** on dollar prices, well above Linear Regression (0.84). The deployed model is XGBoost.
 
 ## Limitations
 
@@ -42,15 +42,15 @@ The data is synthetic: listing characteristics and prices come from a hedonic pr
 | Random Forest | 0.981 | $48,235 |
 | **XGBoost (final)** | **0.990** | **$36,748** |
 
-4. **Validation** — checked for leakage (no duplicate feature rows, single-feature scan, encodings fitted after the split), then re-tested XGBoost with a time-based split, which is the more honest estimate:
+4. **Validation** — checked for leakage (no duplicate feature rows, single-feature scan, encodings fitted after the split), then re-tested all three models with a time-based split (trained on Jan 2020 – Jan 2025, tested on Jan 2025 – Apr 2026), which is the more honest estimate:
 
-| XGBoost, time-based hold-out | Result |
-|---|---|
-| R² (log price) | 0.974 |
-| R² (dollar price) | 0.951 |
-| Median absolute error | $71,383 (~12%) |
+| Model (time-based hold-out) | R² (log price) | R² (dollars) | Median $ error |
+|---|---|---|---|
+| Linear Regression | 0.942 | 0.837 | $123,777 |
+| Random Forest | 0.982 | 0.946 | $57,599 |
+| XGBoost (deployed) | 0.974 | 0.951 | $71,383 |
 
-   The random split flattered the result, so the time-based numbers are the ones to trust.
+   Random Forest and XGBoost perform similarly and both clearly beat Linear Regression. The random split flattered all three models, so the time-based numbers are the ones to trust.
 
 5. **Deployment** — trained model served via a FastAPI `/predict` endpoint, consumed by a Streamlit frontend with dropdown-based inputs (sourced from dataset values, not free text), interactive maps, and comparison charts
 
